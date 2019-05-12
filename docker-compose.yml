@@ -1,0 +1,67 @@
+version: '3'
+services:
+  seed1:
+    image: marcelodock/akkaswarmarm32v7
+    ports:
+      - "2550:2550"
+    environment:
+      CLUSTER_IP: seed1
+      CLUSTER_PORT: 2550
+      SEED1_TCP_ADDR: seed1
+      SEED2_TCP_ADDR: seed2
+      ROLE: backend
+    networks:
+      - akka-cluster
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == worker]
+    command: gradle run
+
+  seed2:
+    image: marcelodock/akkaswarm
+    ports:
+      - "2560:2560"
+      - "8558:8558"
+    environment:
+      CLUSTER_IP: seed2
+      CLUSTER_PORT: 2560
+      SEED1_TCP_ADDR: seed1
+      SEED2_TCP_ADDR: seed2
+      ROLE: backend
+    networks:
+      - akka-cluster
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: any
+        delay: 10s
+    command: gradle run
+
+  frontend:
+    image: marcelodock/akkaswarm
+    ports:
+      - "2590:2590"
+    environment:
+      CLUSTER_IP: frontend
+      CLUSTER_PORT: 2590
+      SEED1_TCP_ADDR: seed1
+      SEED2_TCP_ADDR: seed2
+      ROLE: frontend
+    networks:
+      - akka-cluster
+    deploy:
+      replicas: 1
+      placement:
+        constraints: [node.role == manager]
+      restart_policy:
+        condition: any
+        delay: 20s
+      update_config:
+        parallelism: 1
+        delay: 10s
+    command: gradle run
+networks:
+  akka-cluster:
