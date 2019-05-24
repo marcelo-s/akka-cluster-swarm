@@ -7,8 +7,8 @@ services:
     environment:
       CLUSTER_IP: seed1
       CLUSTER_PORT: 2550
-      SEED1_TCP_ADDR: seed1
-      SEED2_TCP_ADDR: seed2
+      SEED1_IP: seed1
+      SEED2_IP: seed2
       ROLE: backend
     networks:
       - akka-cluster
@@ -16,6 +16,9 @@ services:
       replicas: 1
       placement:
         constraints: [node.role == worker]
+      restart_policy:
+        condition: any
+        delay: 10s
     command: gradle run
 
   seed2:
@@ -26,8 +29,8 @@ services:
     environment:
       CLUSTER_IP: seed2
       CLUSTER_PORT: 2560
-      SEED1_TCP_ADDR: seed1
-      SEED2_TCP_ADDR: seed2
+      SEED1_IP: seed1
+      SEED2_IP: seed2
       ROLE: backend
     networks:
       - akka-cluster
@@ -47,8 +50,8 @@ services:
     environment:
       CLUSTER_IP: frontend
       CLUSTER_PORT: 2590
-      SEED1_TCP_ADDR: seed1
-      SEED2_TCP_ADDR: seed2
+      SEED1_IP: seed1
+      SEED2_IP: seed2
       ROLE: frontend
     networks:
       - akka-cluster
@@ -58,9 +61,6 @@ services:
         constraints: [node.role == manager]
       restart_policy:
         condition: any
-        delay: 20s
-      update_config:
-        parallelism: 1
         delay: 10s
     command: gradle run
 networks:

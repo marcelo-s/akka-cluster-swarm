@@ -1,6 +1,8 @@
-# Akka Cluster in a Docker Swarm (remote)
+# Akka Cluster in a Docker Swarm (Java)
 
-Akka cluster running in docker swarm mode running with raspberry pi on same network.
+Akka cluster running in docker swarm mode.
+The swarm can use ARM devices to deploy the app such as a Raspberry Pi.
+This project uses Java.
 
 ## Terms
 
@@ -28,11 +30,10 @@ For more definitions and how to setup environment follow the official documentat
 
      Please refer to: [Getting started with swarm mode](https://docs.docker.com/engine/swarm/swarm-tutorial/)
 
-* One linux machine (will function as manager of the swarm)
-* One raspberry pi model 3B+ (arm32v7l)
+* One or more linux machines (will function as manager of the swarm)
+* Alternatively, ARM devices, such as Raspberry Pi model 3B+ (arm32v7l)
 
 **IMPORTANT: All commands must be executed on the manager node of the swarm**
-
 
 ### Installing/Running
 
@@ -66,33 +67,35 @@ docker stack deploy --compose-file docker-compose.yml akkaclusterswarm
 
 This will start three services:
 
-- seed1 (on the raspberry node, which is a worker node, see constraints on the docker-compose file)
+- seed1 (on the ARM device, which is a worker node, see the image name and constraints on the docker-compose file)
 - seed2 (on manager node)
 - frontend (on manager node)
 
-The deployed service "seed1", which is deployed on a raspberry uses a different base image:
+IMPORTANT: The deployed service "seed1", uses a different base image:
 
 ```
 seed1:
     image: marcelodock/akkaclusterarm32v7
 ```
 
-This is an special image that uses: "arm32v7/gradle" which is made for working on a raspberry pi model 3 B+
+This is an special image that uses: "arm32v7/gradle" which is made for working on a Raspberry Pi model 3 B+
 which has a arm32v7l architecture.
 
 The other services, namely backend1 and frontend, use the base image:
 ```
 image: marcelodock/akkacluster
 ```
-Which uses the standard "gradle" with jdk8. Please refer to: 
+Which uses the standard gradle image with jdk8. Please refer to: 
 
 [Docker Gradle](https://docs.docker.com/samples/library/gradle/)
 
 Both of these images are located on the public dockerhub, so it can be downloaded directly from any node.
 
+Of course, this configuration can be changed as required by modifying the docker-compose file.
+
 The hostnames and ports of the nodes are being set as environment variables on the
-docker-compose.yml file. Then on the application.conf these variables are obtained using 
-the HOCON syntax and being replaced in the corresponding places.
+docker-compose.yml file. The application.conf use these variables using the
+the HOCON syntax.
 
 On the node manager to see the deployed stack:
 ```
@@ -109,10 +112,10 @@ This should list all the 3 services that are listed on the docker-compose.yml fi
 
 ###See logs/details of the state of a service
 
-Once the command for deploying is used, only a single line indicating that the service is deployed(for each service)
+Once the command for deploying is used, only a single line indicating that the service is deployed (one line for each service)
 is shown, which is not useful at all.
 
-To see the state of each service deployed use the previous command to see the services of the satck,
+To see the state of each service deployed use the previous command to see the services of the stack,
 look for the column ID of the service and then:
 ```
 docker inspect serviceid
@@ -185,11 +188,19 @@ AppMessages: All the messages for the application. In general there are 3 types 
 
 Basic configuration file. Provider is set to cluster. 
 
-There are 2 seed nodes, one is deployed on a raspberry pi device and the other on the linux machine.
+There are 2 seed nodes, one is deployed on a ARM device and the other on a linux machine.
 
 The hostnames and ports of the nodes are being set as environment variables on the docker-compose.yml file. 
-Then on the application.conf these variables are obtained using the HOCON syntax and being replaced in the 
-corresponding places.
+These variables are obtained by the application.conf file using the HOCON syntax.
+
+IMPORTANT: When using docker it is necessary to define the bindings for the hostname otherwise it won't work 
+(see configuration under netty.tcp ):
+
+```
+bind-hostname = "0.0.0.0"
+bind-hostname = ${?BIND_HOST}  # internal (bind) hostname
+bind-port = ${?BIND_PORT} # internal (bind) port
+```
 
 ### Cluster management (HTTP)
 
@@ -199,7 +210,7 @@ The cluster management is set to use the HTTP API, that can be found on:
 To use it for queries and actions, is better to use Postman: [Postman](https://www.getpostman.com/)
 
 
-Now go to postman, or use any browser, on any node of the cluster and go to:
+Now go to postman, or use any browser, on any node of the cluster nodes and go to:
 ```
 http://nodeip:8558/cluster/members/
 ```
@@ -217,6 +228,11 @@ therefore it is accessible on any node, even though the service is only set on s
  [Publish ports](https://docs.docker.com/v17.12/engine/swarm/services/#publish-ports)
 
 The address and port binding are set in the "application.conf" file under the "management" section.
-See that the hostname is set for the "clustering.seed2-ip" node. Which is the ip of the node running the 
+See that the hostname is set for the "clustering.seed2.ip" node. Which is the ip of the node running the 
 cluster management as stated on the file "BackendMain.java".
-When using docker it is necessary to define the bindings otherwise it won't work.
+IMPORTANT: When using docker it is necessary to define the bindings otherwise it won't work:
+
+```
+bind-hostname = 0.0.0.0  # internal (bind) hostname
+bind-port = 8558 # internal (bind) port
+```

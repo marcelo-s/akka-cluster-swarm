@@ -21,12 +21,13 @@ public class Backendmain {
         system.actorOf(Props.create(ClusterListener.class));
 
         String seedPort = ConfigFactory.load().getString("clustering.port");
+
         // Start management system only on port 2560
         if (seedPort.equals("2560")) {
             startManagementSystem(system);
         }
 
-        // Use application.conf file to create backend router and deploy remotly
+        // Use application.conf file to create backend router and deploy remotely
         system.actorOf(FromConfig.getInstance().props(Props.create(Backend.class)), "router1");
     }
 
